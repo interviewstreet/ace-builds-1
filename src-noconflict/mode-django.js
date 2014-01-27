@@ -112,6 +112,10 @@ var Mode = function() {
 };
 oop.inherits(Mode, HtmlMode);
 
+(function() {
+    this.$id = "ace/mode/django";
+}).call(Mode.prototype);
+
 exports.Mode = Mode;
 });
 

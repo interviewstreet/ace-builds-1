@@ -49,6 +49,10 @@ var Mode = function() {
 };
 oop.inherits(Mode, CMode);
 
+(function() {
+    this.$id = "ace/mode/glsl";
+}).call(Mode.prototype);
+
 exports.Mode = Mode;
 });
 

@@ -28,12 +28,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-ace.define('ace/ext/language_tools', ['require', 'exports', 'module' , 'ace/snippets', 'ace/autocomplete', 'ace/config', 'ace/autocomplete/text_completer', 'ace/editor'], function(require, exports, module) {
+ace.define('ace/ext/language_tools', ['require', 'exports', 'module' , 'ace/snippets', 'ace/autocomplete', 'ace/config', 'ace/autocomplete/util', 'ace/autocomplete/text_completer', 'ace/editor'], function(require, exports, module) {
 
 
 var snippetManager = require("../snippets").snippetManager;
 var Autocomplete = require("../autocomplete").Autocomplete;
 var config = require("../config");
+var util = require("../autocomplete/util");
 
 var textCompleter = require("../autocomplete/text_completer");
 var keyWordCompleter = {
@@ -114,6 +115,22 @@ var loadSnippetFile = function(id) {
     });
 };
 
+var onChangeAutocomplete = function(e, editor) {
+    var session = editor.getSession();
+    var pos = editor.getCursorPosition();
+    var line = session.getLine(pos.row);
+    if(e.data.action === 'insertText') {
+        line += e.data.text;
+        pos.column += e.data.text.length;
+    }
+    var prefix = util.retrievePrecedingIdentifier(line, pos.column);
+    if(prefix !== '') {
+        Autocomplete.startCommand.exec(editor);
+    } else if(editor.completer && editor.completer.activated) {
+        editor.completer.detach();
+    }
+};
+
 var Editor = require("../editor").Editor;
 require("../config").defineOptions(Editor.prototype, "editor", {
     enableBasicAutocompletion: {
@@ -121,7 +138,9 @@ require("../config").defineOptions(Editor.prototype, "editor", {
             if (val) {
                 this.completers = completers;
                 this.commands.addCommand(Autocomplete.startCommand);
+                this.on('change', onChangeAutocomplete);
             } else {
+                this.removeListener('change', onChangeAutocomplete);
                 this.commands.removeCommand(Autocomplete.startCommand);
             }
         },
