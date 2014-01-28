@@ -119,14 +119,31 @@ var onChangeAutocomplete = function(e, editor) {
     var session = editor.getSession();
     var pos = editor.getCursorPosition();
     var line = session.getLine(pos.row);
-    if(e.data.action === 'insertText') {
-        line += e.data.text;
-        pos.column += e.data.text.length;
+    var typing = !(
+        (
+            e.data.action === 'insertText' &&
+            e.data.text.length > 1
+        ) ||
+        e.data.action !== 'insertText'
+    );
+    if(!typing) {
+        return;
     }
+    line += e.data.text;
+    pos.column += e.data.text.length;
     var prefix = util.retrievePrecedingIdentifier(line, pos.column);
-    if(prefix !== '') {
-        Autocomplete.startCommand.exec(editor);
-    } else if(editor.completer && editor.completer.activated) {
+
+    var hasCompleter = (editor.completer && editor.completer.activated);
+    if(prefix !== '' && !(hasCompleter)) {
+        if (!editor.completer) {
+            editor.completer = new Autocomplete();
+            editor.completer.autoInsert = false;
+        }
+
+        editor.completer.showPopup(editor);
+        editor.completer.cancelContextMenu();
+
+    } else if(prefix === '' && hasCompleter) {
         editor.completer.detach();
     }
 };
