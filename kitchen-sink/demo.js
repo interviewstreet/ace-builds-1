@@ -6023,6 +6023,7 @@ var Autocomplete = function() {
         var renderer = editor.renderer;
         if (!keepPopupPosition) {
             this.popup.setRow(0);
+            this.popup.setTheme(editor.getTheme());
             this.popup.setFontSize(editor.getFontSize());
 
             var lineHeight = renderer.layerConfig.lineHeight;
@@ -6556,16 +6557,16 @@ var AcePopup = function(parentNode) {
 };
 
 dom.importCssString("\
-.ace_autocomplete.ace-tm .ace_marker-layer .ace_active-line {\
+.ace_editor.ace_autocomplete .ace_marker-layer .ace_active-line {\
     background-color: #CAD6FA;\
     z-index: 1;\
 }\
-.ace_autocomplete.ace-tm .ace_line-hover {\
+.ace_editor.ace_autocomplete .ace_line-hover {\
     border: 1px solid #abbffe;\
     margin-top: -1px;\
     background: rgba(233,233,253,0.4);\
 }\
-.ace_autocomplete .ace_line-hover {\
+.ace_editor.ace_autocomplete .ace_line-hover {\
     position: absolute;\
     z-index: 2;\
 }\
@@ -6577,11 +6578,11 @@ dom.importCssString("\
     text-align: right;\
     z-index: -1;\
 }\
-.ace_autocomplete .ace_completion-highlight{\
+.ace_editor.ace_autocomplete .ace_completion-highlight{\
     color: #000;\
     text-shadow: 0 0 0.01em;\
 }\
-.ace_autocomplete {\
+.ace_editor.ace_autocomplete {\
     width: 280px;\
     z-index: 200000;\
     background: #fbfbfb;\
