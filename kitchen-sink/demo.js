@@ -5909,20 +5909,23 @@ var loadSnippetFile = function(id) {
     });
 };
 
-var onChangeAutocomplete = function(e, editor) {
+var onChangeAutocomplete = function(e) {
+    var editor = e.editor;
     var session = editor.getSession();
     var pos = editor.getCursorPosition();
     var line = session.getLine(pos.row);
     var hasCompleter = (editor.completer && editor.completer.activated);
+
+    var text = e.args || "";
     var typing = !(
         (
-            e.data.action === 'insertText' &&
-            e.data.text.length > 1
+            e.command.name === "insertstring" &&
+            text.length > 1
         ) ||
-        e.data.action !== 'insertText'
+        e.command.name !== "insertstring"
     );
     if(
-        e.data.action === 'removeText' &&
+        e.command.name === 'backspace' &&
         util.retrievePrecedingIdentifier(line, pos.column) === ''
     ) {
         if(hasCompleter) editor.completer.detach();
@@ -5931,8 +5934,8 @@ var onChangeAutocomplete = function(e, editor) {
     if(!typing) {
         return;
     }
-    line += e.data.text;
-    pos.column += e.data.text.length;
+    line += text;
+    pos.column += text.length;
     var prefix = util.retrievePrecedingIdentifier(line, pos.column);
     if(prefix !== '' && !(hasCompleter)) {
         if (!editor.completer) {
@@ -5955,7 +5958,7 @@ require("../config").defineOptions(Editor.prototype, "editor", {
             if (val) {
                 this.completers = completers;
                 this.commands.addCommand(Autocomplete.startCommand);
-                this.on('change', onChangeAutocomplete);
+                this.commands.on('afterExec', onChangeAutocomplete);
             } else {
                 this.removeListener('change', onChangeAutocomplete);
                 this.commands.removeCommand(Autocomplete.startCommand);
