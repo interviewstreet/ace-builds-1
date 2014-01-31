@@ -6015,6 +6015,7 @@ var Autocomplete = function() {
             this.insertMatch();
             e.stop();
         }.bind(this));
+        this.gatherCompletionsId = 0;
     };
 
     this.openPopup = function(editor, prefix, keepPopupPosition) {
@@ -6101,6 +6102,8 @@ var Autocomplete = function() {
             data = this.popup.getData(this.popup.getRow());
         if (!data)
             return false;
+        this.gatherCompletionsId = this.gatherCompletionsId + 1;
+
         if (data.completer && data.completer.insertMatch) {
             data.completer.insertMatch(this.editor);
         } else {
@@ -6146,16 +6149,14 @@ var Autocomplete = function() {
         this.base.column -= prefix.length;
 
         var matches = [];
-        util.parForEach(editor.completers, function(completer, next) {
+        editor.completers.forEach(function(completer) {
             completer.getCompletions(editor, session, pos, prefix, function(err, results) {
                 if (!err)
                     matches = matches.concat(results);
-                next();
-            });
-        }, function() {
-            callback(null, {
-                prefix: prefix,
-                matches: matches
+                callback(null, {
+                    prefix: prefix,
+                    matches: matches
+                });
             });
         });
         return true;
@@ -6184,6 +6185,7 @@ var Autocomplete = function() {
     };
     
     this.updateCompletions = function(keepPopupPosition) {
+        var that = this;
         if (keepPopupPosition && this.base && this.completions) {
             var pos = this.editor.getCursorPosition();
             var prefix = this.editor.session.getTextRange({start: this.base, end: pos});
@@ -6195,19 +6197,27 @@ var Autocomplete = function() {
             this.openPopup(this.editor, prefix, keepPopupPosition);
             return;
         }
+        var _id = this.gatherCompletionsId;
         this.gatherCompletions(this.editor, function(err, results) {
+            var session = that.editor.getSession();
+            var pos = that.editor.getCursorPosition();  
+            var line = session.getLine(pos.row);
+            var prefix = util.retrievePrecedingIdentifier(line, pos.column);
             var matches = results && results.matches;
-            if (!matches || !matches.length)
+            if (!prefix || !prefix.length || !matches || !matches.length)
                 return this.detach();
+            if (prefix.indexOf(results.prefix) != 0
+            || _id != this.gatherCompletionsId)
+                return;
 
             this.completions = new FilteredList(matches);
-            this.completions.setFilter(results.prefix);
+            this.completions.setFilter(prefix);
             var filtered = this.completions.filtered;
             if (!filtered.length)
                 return this.detach();
             if (this.autoInsert && filtered.length == 1)
                 return this.insertMatch(filtered[0]);
-            this.openPopup(this.editor, results.prefix, keepPopupPosition);
+            this.openPopup(this.editor, prefix, keepPopupPosition);
         }.bind(this));
     };
 
