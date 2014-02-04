@@ -5934,8 +5934,6 @@ var onChangeAutocomplete = function(e) {
     if(!typing) {
         return;
     }
-    line += text;
-    pos.column += text.length;
     var prefix = util.retrievePrecedingIdentifier(line, pos.column);
     if(prefix !== '' && !(hasCompleter)) {
         if (!editor.completer) {
@@ -5960,7 +5958,7 @@ require("../config").defineOptions(Editor.prototype, "editor", {
                 this.commands.addCommand(Autocomplete.startCommand);
                 this.commands.on('afterExec', onChangeAutocomplete);
             } else {
-                this.removeListener('change', onChangeAutocomplete);
+                this.removeListener('afterExec', onChangeAutocomplete);
                 this.commands.removeCommand(Autocomplete.startCommand);
             }
         },
@@ -6009,13 +6007,14 @@ var Autocomplete = function() {
 };
 
 (function() {
+    this.gatherCompletionsId = 0;
+
     this.$init = function() {
         this.popup = new AcePopup(document.body || document.documentElement);
         this.popup.on("click", function(e) {
             this.insertMatch();
             e.stop();
         }.bind(this));
-        this.gatherCompletionsId = 0;
     };
 
     this.openPopup = function(editor, prefix, keepPopupPosition) {
@@ -6051,6 +6050,10 @@ var Autocomplete = function() {
         this.editor.off("mousedown", this.mousedownListener);
         this.editor.off("mousewheel", this.mousewheelListener);
         this.changeTimer.cancel();
+
+        if (this.popup && this.popup.isOpen) {
+            this.gatherCompletionsId = this.gatherCompletionsId + 1;
+        }
         
         if (this.popup)
             this.popup.hide();
@@ -6102,7 +6105,6 @@ var Autocomplete = function() {
             data = this.popup.getData(this.popup.getRow());
         if (!data)
             return false;
-        this.gatherCompletionsId = this.gatherCompletionsId + 1;
 
         if (data.completer && data.completer.insertMatch) {
             data.completer.insertMatch(this.editor);
@@ -6149,13 +6151,15 @@ var Autocomplete = function() {
         this.base.column -= prefix.length;
 
         var matches = [];
-        editor.completers.forEach(function(completer) {
+        var total = editor.completers.length;
+        editor.completers.forEach(function(completer, i) {
             completer.getCompletions(editor, session, pos, prefix, function(err, results) {
                 if (!err)
                     matches = matches.concat(results);
                 callback(null, {
                     prefix: prefix,
-                    matches: matches
+                    matches: matches,
+                    left: total - (i + 1)
                 });
             });
         });
@@ -6194,18 +6198,26 @@ var Autocomplete = function() {
             this.completions.setFilter(prefix);
             if (!this.completions.filtered.length)
                 return this.detach();
+            if (this.completions.filtered.length == 1
+            && this.completions.filtered[0].value == prefix
+            && !this.completions.filtered[0].snippet)
+                return this.detach();
             this.openPopup(this.editor, prefix, keepPopupPosition);
             return;
         }
         var _id = this.gatherCompletionsId;
         this.gatherCompletions(this.editor, function(err, results) {
+            var doDetach = function() {
+                if (results.left > 0) return;
+                return this.detach();
+            }.bind(this);
             var session = that.editor.getSession();
             var pos = that.editor.getCursorPosition();  
             var line = session.getLine(pos.row);
             var prefix = util.retrievePrecedingIdentifier(line, pos.column);
             var matches = results && results.matches;
             if (!prefix || !prefix.length || !matches || !matches.length)
-                return this.detach();
+                return doDetach();
             if (prefix.indexOf(results.prefix) != 0
             || _id != this.gatherCompletionsId)
                 return;
@@ -6214,9 +6226,12 @@ var Autocomplete = function() {
             this.completions.setFilter(prefix);
             var filtered = this.completions.filtered;
             if (!filtered.length)
-                return this.detach();
+                return doDetach();
+            if (filtered.length == 1 && filtered[0].value == prefix && !filtered[0].snippet)
+                return doDetach();
             if (this.autoInsert && filtered.length == 1)
                 return this.insertMatch(filtered[0]);
+
             this.openPopup(this.editor, prefix, keepPopupPosition);
         }.bind(this));
     };

@@ -700,11 +700,10 @@ exports.DocCommentHighlightRules = DocCommentHighlightRules;
 
 });
 
-define('ace/mode/xml_highlight_rules', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mode/xml_util', 'ace/mode/text_highlight_rules'], function(require, exports, module) {
+define('ace/mode/xml_highlight_rules', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mode/text_highlight_rules'], function(require, exports, module) {
 
 
 var oop = require("../lib/oop");
-var xmlUtil = require("./xml_util");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var XmlHighlightRules = function(normalize) {
@@ -885,76 +884,6 @@ var XmlHighlightRules = function(normalize) {
 oop.inherits(XmlHighlightRules, TextHighlightRules);
 
 exports.XmlHighlightRules = XmlHighlightRules;
-});
-
-define('ace/mode/xml_util', ['require', 'exports', 'module' ], function(require, exports, module) {
-
-
-function string(state) {
-    return [{
-        token : "string",
-        regex : '"',
-        next : state + "_qqstring"
-    }, {
-        token : "string",
-        regex : "'",
-        next : state + "_qstring"
-    }];
-}
-
-function multiLineString(quote, state) {
-    return [
-        {token : "string", regex : quote, next : state},
-        {
-            token : "constant.language.escape",
-            regex : "(?:&#[0-9]+;)|(?:&#x[0-9a-fA-F]+;)|(?:&[a-zA-Z0-9_:\\.-]+;)" 
-        },
-        {defaultToken : "string"}
-    ];
-}
-
-exports.tag = function(states, name, nextState, tagMap) {
-    states[name] = [{
-        token : "text",
-        regex : "\\s+"
-    }, {
-        
-    token : !tagMap ? "meta.tag.tag-name" : function(value) {
-            if (tagMap[value])
-                return "meta.tag.tag-name." + tagMap[value];
-            else
-                return "meta.tag.tag-name";
-        },
-        regex : "[-_a-zA-Z0-9:]+",
-        next : name + "_embed_attribute_list" 
-    }, {
-        token: "empty",
-        regex: "",
-        next : name + "_embed_attribute_list"
-    }];
-
-    states[name + "_qstring"] = multiLineString("'", name + "_embed_attribute_list");
-    states[name + "_qqstring"] = multiLineString("\"", name + "_embed_attribute_list");
-    
-    states[name + "_embed_attribute_list"] = [{
-        token : "meta.tag.r",
-        regex : "/?>",
-        next : nextState
-    }, {
-        token : "keyword.operator",
-        regex : "="
-    }, {
-        token : "entity.other.attribute-name",
-        regex : "[-_a-zA-Z0-9:]+"
-    }, {
-        token : "constant.numeric", // float
-        regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
-    }, {
-        token : "text",
-        regex : "\\s+"
-    }].concat(string(name));
-};
-
 });
 
 define('ace/mode/html', ['require', 'exports', 'module' , 'ace/lib/oop', 'ace/mode/text', 'ace/mode/javascript', 'ace/mode/css', 'ace/tokenizer', 'ace/mode/html_highlight_rules', 'ace/mode/behaviour/html', 'ace/mode/folding/html', 'ace/mode/html_completions'], function(require, exports, module) {
@@ -2376,7 +2305,7 @@ function findTagName(session, pos) {
             token = iterator.stepBackward();
         } while (token && (hasType(token, 'string') || hasType(token, 'operator') || hasType(token, 'attribute-name') || hasType(token, 'text')));
     }
-    if (token && hasType(token, 'tag-name') && !iterator.stepBackward().value.match('/'))
+    if (token && hasType(token, 'tag.name') && !iterator.stepBackward().value.match('/'))
         return token.value;
 }
 
@@ -2391,7 +2320,7 @@ var HtmlCompletions = function() {
 
         if (!token)
             return [];
-        if (hasType(token, "tag-name") || (token.value == '<' && hasType(token, "text")))
+        if (hasType(token, "tag.name") || (token.value == '<' && hasType(token, "text")))
             return this.getTagCompletions(state, session, pos, prefix);
         if (hasType(token, 'text') || hasType(token, 'attribute-name'))
             return this.getAttributeCompetions(state, session, pos, prefix);
