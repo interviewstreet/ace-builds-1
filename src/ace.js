@@ -3564,7 +3564,7 @@ var TextInput = function(parentNode, host) {
         host.onFocus();
         resetSelection();
     });
-    this.focus = function() { text.focus(); };
+    this.focus = function() { var cursorFocus=function(a){var b=window.scrollX,c=window.scrollY;a.focus(),window.scrollTo(b,c)};cursorFocus(text);};
     this.blur = function() { text.blur(); };
     this.isFocused = function() {
         return isFocused;
